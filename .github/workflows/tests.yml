@@ -1,24 +1,59 @@
 name: Python CI
 
-on:                       # ✅ define at least one trigger
+on:
   push:
   pull_request:
-  workflow_dispatch:      # (optional) lets you run it manually from the Actions tab
+  workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.13"   # or "3.12" if you prefer
+          python-version: "3.13"
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; else pip install pytest; fi
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            pip install pytest
+          fi
+
+      # Initialize the SQLite schema your code expects (books + borrow_records)
+      - name: Initialize SQLite schema
+        run: |
+          python - << 'PY'
+          from database import get_db_connection
+          conn = get_db_connection()
+          conn.executescript("""
+          CREATE TABLE IF NOT EXISTS books(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              title TEXT,
+              author TEXT,
+              isbn TEXT UNIQUE,
+              total_copies INTEGER,
+              available_copies INTEGER
+          );
+          CREATE TABLE IF NOT EXISTS borrow_records(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              patron_id TEXT,
+              book_id INTEGER,
+              borrow_date TEXT,
+              due_date TEXT,
+              return_date TEXT
+          );
+          """)
+          conn.commit()
+          conn.close()
+          PY
 
       - name: Run tests
         env:
