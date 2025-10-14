@@ -3,7 +3,6 @@ from datetime import datetime
 import library_service as svc
 
 def patch_return_happy(monkeypatch):
-    # Minimal in-memory state
     books = {1: {"id": 1, "title": "Clean Code", "available_copies": 0}}
     loan = {"returned_at": None}
 
@@ -42,7 +41,6 @@ def test_return_invalid_patron(monkeypatch):
 
 def test_return_no_active_loan(monkeypatch):
     books, loan = patch_return_happy(monkeypatch)
-    # mark as already returned
     loan["returned_at"] = datetime.now()
     ok, msg = svc.return_book_by_patron("123456", 1)
     assert ok is False and ("no active loan" in msg.lower() or "not" in msg.lower())

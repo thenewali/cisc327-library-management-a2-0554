@@ -33,27 +33,25 @@ def seed_loan(conn, *, patron="123456", book_id=1, title="Clean Code",
 
 def patch_conn(monkeypatch, conn):
     def get_db_connection():
-        # Return a *new* handle to the same in-memory db by sharing backing via connection object
         return conn
     monkeypatch.setattr(svc, "get_db_connection", get_db_connection, raising=True)
 
 def test_no_overdue_active(monkeypatch):
     conn = make_db()
-    seed_loan(conn, borrowed_days_ago=10)  # due in 4 days
+    seed_loan(conn, borrowed_days_ago=10) 
     patch_conn(monkeypatch, conn)
     out = svc.calculate_late_fee_for_book("123456", 1)
     assert out["status"] == "ok" and out["days_overdue"] == 0 and out["fee_amount"] == 0.0
 
 def test_5_days_overdue_active(monkeypatch):
     conn = make_db()
-    seed_loan(conn, borrowed_days_ago=19)  # 5 days late
+    seed_loan(conn, borrowed_days_ago=19) 
     patch_conn(monkeypatch, conn)
     out = svc.calculate_late_fee_for_book("123456", 1)
     assert out["days_overdue"] == 5 and out["fee_amount"] == 2.5
 
 def test_12_days_overdue_returned(monkeypatch):
     conn = make_db()
-    # Returned today, but 12 days after due
     seed_loan(conn, borrowed_days_ago=26, returned_days_ago=0)
     patch_conn(monkeypatch, conn)
     out = svc.calculate_late_fee_for_book("123456", 1)

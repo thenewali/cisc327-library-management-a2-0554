@@ -2,9 +2,7 @@ import pytest
 import library_service as svc
 
 def test_add_book_valid_input(monkeypatch):
-    # minimal stubs your impl expects
     monkeypatch.setattr(svc, "insert_book", lambda title, author, isbn, total, available: True, raising=False)
-    # some starters also call get_book_by_isbn; make it return None (no duplicate)
     monkeypatch.setattr(svc, "get_book_by_isbn", lambda isbn: None, raising=False)
 
     ok, msg = svc.add_book_to_catalog("Test Book", "Test Author", "1234567890123", 5)
@@ -22,7 +20,6 @@ def test_add_book_isbn_length_only(monkeypatch):
     assert ok is True
 
 def test_add_book_db_error_bubbles_up(monkeypatch):
-    # If insert fails, function should return (False, "...") per most starters
     monkeypatch.setattr(svc, "insert_book", lambda *a, **k: False, raising=False)
     monkeypatch.setattr(svc, "get_book_by_isbn", lambda isbn: None, raising=False)
 

@@ -119,7 +119,7 @@ def return_book_by_patron(patron_id: str, book_id: int) -> Tuple[bool, str]:
     if not book:
         return False, "Book not found."
     
-    # Mark the borrow record as returned
+    # Mark as returned
     return_date = datetime.now()
 
     try:
@@ -135,24 +135,20 @@ def return_book_by_patron(patron_id: str, book_id: int) -> Tuple[bool, str]:
         detail = ""
     
     if not ok:
-        # If DB gave a reason, surface it; otherwise use a generic message.
         return False, detail or "No active loan found for this patron and book."
     
-    # Bump availability
     availability_ok = update_book_availability(book_id, +1)
     if not availability_ok:
-        # (Edge case) The loan was closed but availability failed to update.
         return False, "Return recorded, but failed to update availability. Please contact support."
 
     return True, f'Returned "{book["title"]}" successfully.'
 
 def calculate_late_fee_for_book(patron_id: str, book_id: int) -> Dict:
-    # Validate patron (6 digits)
+    # 6 digits
     if not patron_id or not patron_id.isdigit() or len(patron_id) != 6:
         return {"status": "error", "message": "Invalid patron ID. Must be exactly 6 digits.",
                 "fee_amount": 0.0, "days_overdue": 0}
 
-    # Active loan first; else most recent historical
     conn = get_db_connection()
     active = conn.execute(
         """
@@ -162,7 +158,7 @@ def calculate_late_fee_for_book(patron_id: str, book_id: int) -> Dict:
         ORDER BY borrow_date DESC
         LIMIT 1
         """, (patron_id, book_id)
-    ).fetchone()
+        ).fetchone()
 
     rec = active or conn.execute(
         """
@@ -172,7 +168,7 @@ def calculate_late_fee_for_book(patron_id: str, book_id: int) -> Dict:
         ORDER BY COALESCE(return_date, borrow_date) DESC
         LIMIT 1
         """, (patron_id, book_id)
-    ).fetchone()
+        ).fetchone()
     conn.close()
 
     if rec is None:
@@ -190,7 +186,6 @@ def calculate_late_fee_for_book(patron_id: str, book_id: int) -> Dict:
     ref = returned_at or datetime.now()
     days_overdue = max(0, (ref.date() - due_at.date()).days)
 
-    # Fee: first 7 days @ $0.50/day, remainder @ $1/day, cap $15
     fee = 0.0
     if days_overdue > 0:
         first = min(days_overdue, 7)
@@ -234,7 +229,7 @@ def search_books_in_catalog(search_term: str, search_type: str) -> List[Dict]:
     books = get_all_books() or []
     results: List[Dict] = []
 
-    # Helpers
+    # Helper functions
     def _norm_text(s: str) -> str:
         return (s or "").casefold()
 
@@ -243,13 +238,12 @@ def search_books_in_catalog(search_term: str, search_type: str) -> List[Dict]:
 
     if stype in {"title", "author"}:
         needle = term.casefold()
-        key = stype  # "title" or "author"
+        key = stype
         for b in books:
             hay = _norm_text(b.get(key, ""))
             if needle in hay:
                 results.append(b)
     else:
-        # ISBN search — digits-only contains
         needle = _digits_only(term)
         if not needle:
             return []
@@ -258,13 +252,8 @@ def search_books_in_catalog(search_term: str, search_type: str) -> List[Dict]:
             if needle in hay:
                 results.append(b)
 
-    # (Optional) stable sort by title then author for consistent UX
     results.sort(key=lambda x: (_norm_text(x.get("title", "")), _norm_text(x.get("author", ""))))
     return results
-
-from datetime import datetime, timedelta
-from typing import Dict, List, Any
-from database import get_db_connection
 
 def get_patron_status_report(patron_id: str) -> Dict:
     if not patron_id or not patron_id.isdigit() or len(patron_id) != 6:
@@ -350,7 +339,6 @@ def get_patron_status_report(patron_id: str) -> Dict:
             returned_at = datetime.fromisoformat(r["return_date"])
         except Exception:
             continue
-        # ✅ Use today for days_overdue (matches your test expectations)
         days_over = max(0, (datetime.now().date() - due_at.date()).days) if due_at else 0
         recent_returns.append({
             "book_id": r["book_id"],

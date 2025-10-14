@@ -38,17 +38,14 @@ def test_report_active_and_returned(monkeypatch):
     patch_conn(monkeypatch, conn)
     now = datetime.now()
 
-    # seed books
     conn.execute("INSERT INTO books(id,title,author,isbn,total_copies,available_copies) VALUES(1,'Clean Code','RCM','9780132350884',1,0)")
     conn.execute("INSERT INTO books(id,title,author,isbn,total_copies,available_copies) VALUES(2,'The Pragmatic Programmer','HT','9780201616224',1,1)")
 
-    # active: borrowed 26 days ago -> 12 days overdue (7*0.5 + 5*1 = 8.5)
     b1 = now - timedelta(days=26)
     d1 = b1 + timedelta(days=14)
     conn.execute("""INSERT INTO borrow_records(patron_id,book_id,borrow_date,due_date,return_date)
                     VALUES(?,?,?,?,NULL)""", ("123456", 1, b1.isoformat(), d1.isoformat()))
 
-    # returned: borrowed 20 days ago, returned 2 days ago -> overdue 6 (6 * 0.5 = 3.0)
     b2 = now - timedelta(days=20)
     d2 = b2 + timedelta(days=14)
     r2 = now - timedelta(days=2)
