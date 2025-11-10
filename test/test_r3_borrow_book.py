@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime, timedelta
-import library_service as svc
+import services.library_service as svc
 
 def _ok_insert_borrow(patron_id, book_id, borrow_date, due_date):
     return True

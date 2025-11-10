@@ -1,6 +1,6 @@
 import types
 from datetime import datetime
-import library_service as svc
+import services.library_service as svc
 
 def patch_return_happy(monkeypatch):
     books = {1: {"id": 1, "title": "Clean Code", "available_copies": 0}}
